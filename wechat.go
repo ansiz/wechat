@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"sync"
 
-	"kshare/models/store"
 	"kshare/webserver/modules/wechat/cache"
 	"kshare/webserver/modules/wechat/context"
 	"kshare/webserver/modules/wechat/js"
@@ -41,7 +40,6 @@ type Config struct {
 
 // NewWechat init
 func NewWechat(cfg *Config) *Wechat {
-	cfg.Cache = cache.NewCache(store.RedisPool)
 	context := new(context.Context)
 	copyConfigToContext(cfg, context)
 	return &Wechat{
