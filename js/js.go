@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/silenceper/wechat/context"
-	"github.com/silenceper/wechat/util"
+	"kshare/webserver/modules/wechat/context"
+	"kshare/webserver/modules/wechat/util"
 )
 
 const getTicketURL = "https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=%s&type=jsapi"
 
-// Js struct
-type Js struct {
+// Manager struct
+type Manager struct {
 	*context.Context
 }
 
@@ -32,19 +32,17 @@ type resTicket struct {
 	ExpiresIn int64  `json:"expires_in"`
 }
 
-//NewJs init
-func NewJs(context *context.Context) *Js {
-	js := new(Js)
-	js.Context = context
-	return js
+// NewManager returns a jssdk manager.
+func NewManager(context *context.Context) *Manager {
+	return &Manager{Context: context}
 }
 
 //GetConfig 获取jssdk需要的配置参数
 //uri 为当前网页地址
-func (js *Js) GetConfig(uri string) (config *Config, err error) {
+func (m *Manager) GetConfig(uri string) (config *Config, err error) {
 	config = new(Config)
 	var ticketStr string
-	ticketStr, err = js.GetTicket()
+	ticketStr, err = m.GetTicket()
 	if err != nil {
 		return
 	}
@@ -54,7 +52,7 @@ func (js *Js) GetConfig(uri string) (config *Config, err error) {
 	str := fmt.Sprintf("jsapi_ticket=%s&noncestr=%s&timestamp=%d&url=%s", ticketStr, nonceStr, timestamp, uri)
 	sigStr := util.Signature(str)
 
-	config.AppID = js.AppID
+	config.AppID = m.AppID
 	config.NonceStr = nonceStr
 	config.Timestamp = timestamp
 	config.Signature = sigStr
@@ -62,19 +60,19 @@ func (js *Js) GetConfig(uri string) (config *Config, err error) {
 }
 
 //GetTicket 获取jsapi_tocket
-func (js *Js) GetTicket() (ticketStr string, err error) {
-	js.GetJsAPITicketLock().Lock()
-	defer js.GetJsAPITicketLock().Unlock()
+func (m *Manager) GetTicket() (ticketStr string, err error) {
+	m.GetJsAPITicketLock().Lock()
+	defer m.GetJsAPITicketLock().Unlock()
 
 	//先从cache中取
-	jsAPITicketCacheKey := fmt.Sprintf("jsapi_ticket_%s", js.AppID)
-	val := js.Cache.Get(jsAPITicketCacheKey)
+	jsAPITicketCacheKey := fmt.Sprintf("jsapi_ticket_%s", m.AppID)
+	val := m.Cache.Get(jsAPITicketCacheKey)
 	if val != nil {
 		ticketStr = val.(string)
 		return
 	}
 	var ticket resTicket
-	ticket, err = js.getTicketFromServer()
+	ticket, err = m.getTicketFromServer()
 	if err != nil {
 		return
 	}
@@ -83,9 +81,9 @@ func (js *Js) GetTicket() (ticketStr string, err error) {
 }
 
 //getTicketFromServer 强制从服务器中获取ticket
-func (js *Js) getTicketFromServer() (ticket resTicket, err error) {
+func (m *Manager) getTicketFromServer() (ticket resTicket, err error) {
 	var accessToken string
-	accessToken, err = js.GetAccessToken()
+	accessToken, err = m.GetAccessToken()
 	if err != nil {
 		return
 	}
@@ -102,8 +100,8 @@ func (js *Js) getTicketFromServer() (ticket resTicket, err error) {
 		return
 	}
 
-	jsAPITicketCacheKey := fmt.Sprintf("jsapi_ticket_%s", js.AppID)
+	jsAPITicketCacheKey := fmt.Sprintf("jsapi_ticket_%s", m.AppID)
 	expires := ticket.ExpiresIn - 1500
-	err = js.Cache.Set(jsAPITicketCacheKey, ticket.Ticket, time.Duration(expires)*time.Second)
+	err = m.Cache.Set(jsAPITicketCacheKey, ticket.Ticket, time.Duration(expires)*time.Second)
 	return
 }

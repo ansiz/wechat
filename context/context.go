@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/silenceper/wechat/cache"
+	"kshare/webserver/modules/wechat/cache"
 )
 
 // Context struct
@@ -13,6 +13,9 @@ type Context struct {
 	AppSecret      string
 	Token          string
 	EncodingAESKey string
+	PayMchID       string
+	PayNotifyURL   string
+	PayKey         string
 
 	Cache cache.Cache
 

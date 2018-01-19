@@ -6,6 +6,7 @@
 
 使用Golang开发的微信SDK，简单、易用。
 
+本仓库fork自[github.com/silenceper/wechat](github.com/silenceper/wechat)，稍作修改并加入了`pay`模块，后续有时间会整理后提交`pull request`
 ## 快速开始
 
 以下是一个处理消息接收以及回复的例子：

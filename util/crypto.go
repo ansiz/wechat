@@ -1,9 +1,13 @@
 package util
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 )
 
@@ -180,4 +184,16 @@ func decodeNetworkByteOrder(orderBytes []byte) (n uint32) {
 		uint32(orderBytes[1])<<16 |
 		uint32(orderBytes[2])<<8 |
 		uint32(orderBytes[3])
+}
+
+// MD5Sum returns upper md5sum value.
+func MD5Sum(data string) (sum string) {
+	h := md5.New()
+	buf := bufio.NewWriterSize(h, 128)
+	buf.WriteString(data)
+	buf.Flush()
+	sign := make([]byte, hex.EncodedLen(h.Size()))
+	hex.Encode(sign, h.Sum(nil))
+	sum = string(bytes.ToUpper(sign))
+	return
 }

@@ -22,6 +22,11 @@ type RedisOpts struct {
 	IdleTimeout int32  `yml:"idle_timeout" json:"idle_timeout"` //second
 }
 
+// NewCache returns new wechat Cache.
+func NewCache(pool *redis.Pool) *Redis {
+	return &Redis{pool}
+}
+
 //NewRedis 实例化
 func NewRedis(opts *RedisOpts) *Redis {
 	pool := &redis.Pool{

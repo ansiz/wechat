@@ -4,24 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/silenceper/wechat/context"
-	"github.com/silenceper/wechat/util"
+	"kshare/webserver/modules/wechat/context"
+	"kshare/webserver/modules/wechat/util"
 )
 
 const (
 	templateSendURL = "https://api.weixin.qq.com/cgi-bin/message/template/send"
+	templateListURL = "https://api.weixin.qq.com/cgi-bin/template/get_all_private_template"
 )
 
-//Template 模板消息
-type Template struct {
+// Manager struct extends context.
+type Manager struct {
 	*context.Context
 }
 
-//NewTemplate 实例化
-func NewTemplate(context *context.Context) *Template {
-	tpl := new(Template)
-	tpl.Context = context
-	return tpl
+// NewManager returns a template manager
+func NewManager(context *context.Context) *Manager {
+	return &Manager{context}
 }
 
 //Message 发送的模板消息内容
@@ -50,10 +49,15 @@ type resTemplateSend struct {
 	MsgID int64 `json:"msgid"`
 }
 
+type resTemplateList struct {
+	util.CommonError
+	Templates interface{} `json:"template_list"`
+}
+
 //Send 发送模板消息
-func (tpl *Template) Send(msg *Message) (msgID int64, err error) {
+func (m *Manager) Send(msg *Message) (msgID int64, err error) {
 	var accessToken string
-	accessToken, err = tpl.GetAccessToken()
+	accessToken, err = m.GetAccessToken()
 	if err != nil {
 		return
 	}
@@ -71,4 +75,25 @@ func (tpl *Template) Send(msg *Message) (msgID int64, err error) {
 	}
 	msgID = result.MsgID
 	return
+}
+
+// ListTemplates lists all tempaltes
+func (m *Manager) ListTemplates() (interface{}, error) {
+	accessToken, err := m.GetAccessToken()
+	if err != nil {
+		return nil, err
+	}
+	uri := fmt.Sprintf("%s?access_token=%s", templateListURL, accessToken)
+	response, err := util.HTTPGet(uri)
+
+	var result resTemplateList
+	err = json.Unmarshal(response, &result)
+	if err != nil {
+		return nil, err
+	}
+	if result.ErrCode != 0 {
+		err = fmt.Errorf("template msg list error : errcode=%v , errmsg=%v", result.ErrCode, result.ErrMsg)
+		return nil, err
+	}
+	return result, nil
 }

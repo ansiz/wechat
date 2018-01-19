@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/silenceper/wechat/util"
+	"kshare/webserver/modules/wechat/util"
 )
 
 //MediaType 媒体文件类型
@@ -31,16 +31,16 @@ const (
 type Media struct {
 	util.CommonError
 
-	Type      MediaType `json:"type"`
-	MediaID   string    `json:"media_id"`
-	ThumbMediaID string `json:"thumb_media_id"`
-	CreatedAt int64     `json:"created_at"`
+	Type         MediaType `json:"type"`
+	MediaID      string    `json:"media_id"`
+	ThumbMediaID string    `json:"thumb_media_id"`
+	CreatedAt    int64     `json:"created_at"`
 }
 
 //MediaUpload 临时素材上传
-func (material *Material) MediaUpload(mediaType MediaType, filename string) (media Media, err error) {
+func (m *Manager) MediaUpload(mediaType MediaType, filename string) (media Media, err error) {
 	var accessToken string
-	accessToken, err = material.GetAccessToken()
+	accessToken, err = m.GetAccessToken()
 	if err != nil {
 		return
 	}
@@ -64,9 +64,9 @@ func (material *Material) MediaUpload(mediaType MediaType, filename string) (med
 
 //GetMediaURL 返回临时素材的下载地址供用户自己处理
 //NOTICE: URL 不可公开，因为含access_token 需要立即另存文件
-func (material *Material) GetMediaURL(mediaID string) (mediaURL string, err error) {
+func (m *Manager) GetMediaURL(mediaID string) (mediaURL string, err error) {
 	var accessToken string
-	accessToken, err = material.GetAccessToken()
+	accessToken, err = m.GetAccessToken()
 	if err != nil {
 		return
 	}
@@ -82,9 +82,9 @@ type resMediaImage struct {
 }
 
 //ImageUpload 图片上传
-func (material *Material) ImageUpload(filename string) (url string, err error) {
+func (m *Manager) ImageUpload(filename string) (url string, err error) {
 	var accessToken string
-	accessToken, err = material.GetAccessToken()
+	accessToken, err = m.GetAccessToken()
 	if err != nil {
 		return
 	}

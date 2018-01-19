@@ -4,20 +4,27 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/silenceper/wechat/cache"
-	"github.com/silenceper/wechat/context"
-	"github.com/silenceper/wechat/js"
-	"github.com/silenceper/wechat/material"
-	"github.com/silenceper/wechat/menu"
-	"github.com/silenceper/wechat/oauth"
-	"github.com/silenceper/wechat/server"
-	"github.com/silenceper/wechat/template"
-	"github.com/silenceper/wechat/user"
+	"kshare/models/store"
+	"kshare/webserver/modules/wechat/cache"
+	"kshare/webserver/modules/wechat/context"
+	"kshare/webserver/modules/wechat/js"
+	"kshare/webserver/modules/wechat/material"
+	"kshare/webserver/modules/wechat/menu"
+	"kshare/webserver/modules/wechat/oauth"
+	"kshare/webserver/modules/wechat/pay"
+	"kshare/webserver/modules/wechat/server"
+	"kshare/webserver/modules/wechat/template"
+	"kshare/webserver/modules/wechat/user"
 )
 
 // Wechat struct
 type Wechat struct {
-	Context *context.Context
+	Context  *context.Context
+	OAuth    *oauth.Manager
+	Pay      *pay.Manager
+	JSSDK    *js.Manager
+	Material *material.Manager
+	Template *template.Manager
 }
 
 // Config for user
@@ -26,14 +33,25 @@ type Config struct {
 	AppSecret      string
 	Token          string
 	EncodingAESKey string
+	PayMchID       string
+	PayNotifyURL   string
+	PayKey         string
 	Cache          cache.Cache
 }
 
 // NewWechat init
 func NewWechat(cfg *Config) *Wechat {
+	cfg.Cache = cache.NewCache(store.RedisPool)
 	context := new(context.Context)
 	copyConfigToContext(cfg, context)
-	return &Wechat{context}
+	return &Wechat{
+		Context:  context,
+		OAuth:    oauth.NewManager(context),
+		Pay:      pay.NewManager(context),
+		JSSDK:    js.NewManager(context),
+		Material: material.NewManager(context),
+		Template: template.NewManager(context),
+	}
 }
 
 func copyConfigToContext(cfg *Config, context *context.Context) {
@@ -41,6 +59,9 @@ func copyConfigToContext(cfg *Config, context *context.Context) {
 	context.AppSecret = cfg.AppSecret
 	context.Token = cfg.Token
 	context.EncodingAESKey = cfg.EncodingAESKey
+	context.PayMchID = cfg.PayMchID
+	context.PayNotifyURL = cfg.PayNotifyURL
+	context.PayKey = cfg.PayKey
 	context.Cache = cfg.Cache
 	context.SetAccessTokenLock(new(sync.RWMutex))
 	context.SetJsAPITicketLock(new(sync.RWMutex))
@@ -58,21 +79,6 @@ func (wc *Wechat) GetAccessToken() (string, error) {
 	return wc.Context.GetAccessToken()
 }
 
-// GetOauth oauth2网页授权
-func (wc *Wechat) GetOauth() *oauth.Oauth {
-	return oauth.NewOauth(wc.Context)
-}
-
-// GetMaterial 素材管理
-func (wc *Wechat) GetMaterial() *material.Material {
-	return material.NewMaterial(wc.Context)
-}
-
-// GetJs js-sdk配置
-func (wc *Wechat) GetJs() *js.Js {
-	return js.NewJs(wc.Context)
-}
-
 // GetMenu 菜单管理接口
 func (wc *Wechat) GetMenu() *menu.Menu {
 	return menu.NewMenu(wc.Context)
@@ -81,9 +87,4 @@ func (wc *Wechat) GetMenu() *menu.Menu {
 // GetUser 用户管理接口
 func (wc *Wechat) GetUser() *user.User {
 	return user.NewUser(wc.Context)
-}
-
-// GetTemplate 模板消息接口
-func (wc *Wechat) GetTemplate() *template.Template {
-	return template.NewTemplate(wc.Context)
 }

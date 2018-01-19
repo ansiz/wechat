@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/silenceper/wechat/context"
-	"github.com/silenceper/wechat/util"
+	"kshare/webserver/modules/wechat/context"
+	"kshare/webserver/modules/wechat/util"
 )
 
 const (
@@ -18,33 +18,31 @@ const (
 	checkAccessTokenURL   = "https://api.weixin.qq.com/sns/auth?access_token=%s&openid=%s"
 )
 
-//Oauth 保存用户授权信息
-type Oauth struct {
+// Manager struct extends context.
+type Manager struct {
 	*context.Context
 }
 
-//NewOauth 实例化授权信息
-func NewOauth(context *context.Context) *Oauth {
-	auth := new(Oauth)
-	auth.Context = context
-	return auth
+// NewManager returns an OAuth manager.
+func NewManager(context *context.Context) *Manager {
+	return &Manager{Context: context}
 }
 
 //GetRedirectURL 获取跳转的url地址
-func (oauth *Oauth) GetRedirectURL(redirectURI, scope, state string) (string, error) {
+func (m *Manager) GetRedirectURL(redirectURI, scope, state string) (string, error) {
 	//url encode
 	urlStr := url.QueryEscape(redirectURI)
-	return fmt.Sprintf(redirectOauthURL, oauth.AppID, urlStr, scope, state), nil
+	return fmt.Sprintf(redirectOauthURL, m.AppID, urlStr, scope, state), nil
 }
 
 //Redirect 跳转到网页授权
-func (oauth *Oauth) Redirect(writer http.ResponseWriter, redirectURI, scope, state string) error {
-	location, err := oauth.GetRedirectURL(redirectURI, scope, state)
+func (m *Manager) Redirect(request *http.Request, writer http.ResponseWriter,
+	redirectURI, scope, state string) error {
+	location, err := m.GetRedirectURL(redirectURI, scope, state)
 	if err != nil {
 		return err
 	}
-	//location 为完整地址，所以不需要request
-	http.Redirect(writer, nil, location, 302)
+	http.Redirect(writer, request, location, 302)
 	return nil
 }
 
@@ -60,8 +58,8 @@ type ResAccessToken struct {
 }
 
 // GetUserAccessToken 通过网页授权的code 换取access_token(区别于context中的access_token)
-func (oauth *Oauth) GetUserAccessToken(code string) (result ResAccessToken, err error) {
-	urlStr := fmt.Sprintf(accessTokenURL, oauth.AppID, oauth.AppSecret, code)
+func (m *Manager) GetUserAccessToken(code string) (result ResAccessToken, err error) {
+	urlStr := fmt.Sprintf(accessTokenURL, m.AppID, m.AppSecret, code)
 	var response []byte
 	response, err = util.HTTPGet(urlStr)
 	if err != nil {
@@ -79,8 +77,8 @@ func (oauth *Oauth) GetUserAccessToken(code string) (result ResAccessToken, err 
 }
 
 //RefreshAccessToken 刷新access_token
-func (oauth *Oauth) RefreshAccessToken(refreshToken string) (result ResAccessToken, err error) {
-	urlStr := fmt.Sprintf(refreshAccessTokenURL, oauth.AppID, refreshToken)
+func (m *Manager) RefreshAccessToken(refreshToken string) (result ResAccessToken, err error) {
+	urlStr := fmt.Sprintf(refreshAccessTokenURL, m.AppID, refreshToken)
 	var response []byte
 	response, err = util.HTTPGet(urlStr)
 	if err != nil {
@@ -98,7 +96,7 @@ func (oauth *Oauth) RefreshAccessToken(refreshToken string) (result ResAccessTok
 }
 
 //CheckAccessToken 检验access_token是否有效
-func (oauth *Oauth) CheckAccessToken(accessToken, openID string) (b bool, err error) {
+func (m *Manager) CheckAccessToken(accessToken, openID string) (b bool, err error) {
 	urlStr := fmt.Sprintf(checkAccessTokenURL, accessToken, openID)
 	var response []byte
 	response, err = util.HTTPGet(urlStr)
@@ -124,7 +122,7 @@ type UserInfo struct {
 
 	OpenID     string   `json:"openid"`
 	Nickname   string   `json:"nickname"`
-	Sex        int32    `json:"sex"`
+	Sex        int      `json:"sex"`
 	Province   string   `json:"province"`
 	City       string   `json:"city"`
 	Country    string   `json:"country"`
@@ -134,7 +132,7 @@ type UserInfo struct {
 }
 
 //GetUserInfo 如果scope为 snsapi_userinfo 则可以通过此方法获取到用户基本信息
-func (oauth *Oauth) GetUserInfo(accessToken, openID string) (result UserInfo, err error) {
+func (m *Manager) GetUserInfo(accessToken, openID string) (result UserInfo, err error) {
 	urlStr := fmt.Sprintf(userInfoURL, accessToken, openID)
 	var response []byte
 	response, err = util.HTTPGet(urlStr)
